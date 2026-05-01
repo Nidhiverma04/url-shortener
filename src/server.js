@@ -8,7 +8,8 @@ const validUrl = require('valid-url');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+const BASE_URL = `https://url-shortenerr.up.railway.app/`
+// (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 
 app.use(cors());
 app.use(express.json());
