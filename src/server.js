@@ -46,7 +46,7 @@ app.post('/api/shorten', (req, res) => {
     if (existing) return res.status(409).json({ error: 'That alias is already taken.' });
   }
 
-  const shortUrl = `${getBaseUrl(req).replace(/\/+$/, '')}/${alias}`;
+  const shortUrl = `${getBaseUrl(req).replace(/\/+$/, '')}${alias}`;
   const createdAt = new Date().toISOString();
   db.prepare('INSERT INTO links (alias, original_url, short_url, created_at, clicks) VALUES (?, ?, ?, ?, 0)')
     .run(alias, url, shortUrl, createdAt);
