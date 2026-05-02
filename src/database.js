@@ -2,6 +2,11 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
+process.on('unhandledRejection', (err) => {
+  console.error('DB init error:', err);
+  process.exit(1);
+});
+
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../data/links.db');
 const dir = path.dirname(DB_PATH);
 if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -44,7 +49,10 @@ class SyncDB {
 }
 
 async function initDB() {
-  const SQL = await initSqlJs();
+  const SQL = await initSqlJs({
+    locateFile: file => path.join(__dirname, '../node_modules/sql.js/dist/', file)
+  });
+
   let sqlDb;
   if (fs.existsSync(DB_PATH)) {
     sqlDb = new SQL.Database(fs.readFileSync(DB_PATH));

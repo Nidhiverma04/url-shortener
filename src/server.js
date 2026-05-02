@@ -8,12 +8,20 @@ const validUrl = require('valid-url');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BASE_URL = `https://url-shortenerr.up.railway.app/`
-// (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+
+function getBaseUrl(req) {
+  if (process.env.BASE_URL) return process.env.BASE_URL.replace(/\/+$/, '');
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+  const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  return `${proto}://${host}`;
+}
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Health check — platforms ping this to verify the app is up
+app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -38,7 +46,7 @@ app.post('/api/shorten', (req, res) => {
     if (existing) return res.status(409).json({ error: 'That alias is already taken.' });
   }
 
-  const shortUrl = `${BASE_URL}/${alias}`;
+  const shortUrl = `${getBaseUrl(req)}/${alias}`.replace(/([^:])\/\//g, '$1/');
   const createdAt = new Date().toISOString();
   db.prepare('INSERT INTO links (alias, original_url, short_url, created_at, clicks) VALUES (?, ?, ?, ?, 0)')
     .run(alias, url, shortUrl, createdAt);
@@ -88,8 +96,9 @@ app.get('/:alias', (req, res) => {
 });
 
 initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`\n🔗 URL Shortener running at ${BASE_URL}`);
-    console.log(`   Local: http://localhost:${PORT}\n`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🔗 URL Shortener running`);
+    console.log(`   Local: http://localhost:${PORT}`);
+    console.log(`   BASE_URL env: ${process.env.BASE_URL || '(auto-detect from request)'}\n`);
   });
 }).catch(err => { console.error('DB init failed:', err); process.exit(1); });

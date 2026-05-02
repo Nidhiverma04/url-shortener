@@ -1,3 +1,4 @@
+
 # Snip — URL Shortener
 
 A fully deployable URL shortener with click analytics, custom aliases, and a clean dashboard.
@@ -29,6 +30,7 @@ cp .env.example .env
 ```
 
 Edit `.env`:
+
 ```
 PORT=3000
 BASE_URL=http://localhost:3000
@@ -41,6 +43,7 @@ npm start
 ```
 
 Or for development with auto-restart:
+
 ```bash
 npm run dev
 ```
@@ -107,13 +110,13 @@ url-shortener/
 
 ## API Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/shorten` | Create a short link |
-| GET | `/api/links` | List all links |
-| GET | `/api/links/:alias/stats` | Get click details for a link |
-| DELETE | `/api/links/:alias` | Delete a link |
-| GET | `/:alias` | Redirect to original URL |
+| Method | Endpoint                    | Description                  |
+| ------ | --------------------------- | ---------------------------- |
+| POST   | `/api/shorten`            | Create a short link          |
+| GET    | `/api/links`              | List all links               |
+| GET    | `/api/links/:alias/stats` | Get click details for a link |
+| DELETE | `/api/links/:alias`       | Delete a link                |
+| GET    | `/:alias`                 | Redirect to original URL     |
 
 ### POST /api/shorten
 
@@ -125,6 +128,7 @@ url-shortener/
 ```
 
 Response:
+
 ```json
 {
   "alias": "abc123",
