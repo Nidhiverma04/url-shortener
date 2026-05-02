@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 8080;
 
 function getBaseUrl(req) {
   if (process.env.BASE_URL) return process.env.BASE_URL.replace(/\/+$/, '');
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+  const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
   const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
   return `${proto}://${host}`;
 }
@@ -46,7 +46,8 @@ app.post('/api/shorten', (req, res) => {
     if (existing) return res.status(409).json({ error: 'That alias is already taken.' });
   }
 
-  const shortUrl = `${getBaseUrl(req).replace(/\/+$/, '')}${alias}`;
+  const shortUrl = `${getBaseUrl(req).replace(/\/+$/, '')}/${alias}`;
+  // console.log(shortUrl)
   const createdAt = new Date().toISOString();
   db.prepare('INSERT INTO links (alias, original_url, short_url, created_at, clicks) VALUES (?, ?, ?, ?, 0)')
     .run(alias, url, shortUrl, createdAt);
