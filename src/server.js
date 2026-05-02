@@ -8,9 +8,10 @@ const validUrl = require('valid-url');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const BASE = (process.env.BASE_URL || '').replace(/\/+$/, '');
 
 function getBaseUrl(req) {
-  if (process.env.BASE_URL) return process.env.BASE_URL.replace(/\/+$/, '');
+  if (BASE) return BASE;
   const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
   const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
   return `${proto}://${host}`;
@@ -20,8 +21,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Health check — platforms ping this to verify the app is up
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
+
+app.get('/api/debug', (req, res) => {
+  res.json({
+    BASE_URL_ENV: process.env.BASE_URL || 'NOT SET',
+    BASE_computed: BASE,
+    getBaseUrl: getBaseUrl(req),
+    headers: {
+      host: req.headers.host,
+      'x-forwarded-proto': req.headers['x-forwarded-proto'],
+      'x-forwarded-host': req.headers['x-forwarded-host'],
+    }
+  });
+});
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -30,7 +43,6 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// POST /api/shorten
 app.post('/api/shorten', (req, res) => {
   const db = getDB();
   const { url, customAlias } = req.body;
@@ -46,8 +58,9 @@ app.post('/api/shorten', (req, res) => {
     if (existing) return res.status(409).json({ error: 'That alias is already taken.' });
   }
 
-  const shortUrl = `${getBaseUrl(req).replace(/\/+$/, '')}/${alias}`;
-  // console.log(shortUrl)
+  const base = getBaseUrl(req).replace(/\/+$/, '');
+  const shortUrl = `${base}/${alias}`;
+
   const createdAt = new Date().toISOString();
   db.prepare('INSERT INTO links (alias, original_url, short_url, created_at, clicks) VALUES (?, ?, ?, ?, 0)')
     .run(alias, url, shortUrl, createdAt);
@@ -55,14 +68,12 @@ app.post('/api/shorten', (req, res) => {
   res.json({ alias, shortUrl, originalUrl: url, createdAt, clicks: 0, id: link.id });
 });
 
-// GET /api/links
 app.get('/api/links', (req, res) => {
   const db = getDB();
   const links = db.prepare('SELECT * FROM links ORDER BY created_at DESC').all();
   res.json(links);
 });
 
-// GET /api/links/:alias/stats
 app.get('/api/links/:alias/stats', (req, res) => {
   const db = getDB();
   const link = db.prepare('SELECT * FROM links WHERE alias = ?').get(req.params.alias);
@@ -71,7 +82,6 @@ app.get('/api/links/:alias/stats', (req, res) => {
   res.json({ ...link, clickDetails: clicks });
 });
 
-// DELETE /api/links/:alias
 app.delete('/api/links/:alias', (req, res) => {
   const db = getDB();
   const link = db.prepare('SELECT id FROM links WHERE alias = ?').get(req.params.alias);
@@ -81,7 +91,6 @@ app.delete('/api/links/:alias', (req, res) => {
   res.json({ success: true });
 });
 
-// Redirect
 app.get('/:alias', (req, res) => {
   const db = getDB();
   const { alias } = req.params;
@@ -100,6 +109,6 @@ initDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🔗 URL Shortener running`);
     console.log(`   Local: http://localhost:${PORT}`);
-    console.log(`   BASE_URL env: ${process.env.BASE_URL || '(auto-detect from request)'}\n`);
+    console.log(`   BASE_URL env: ${process.env.BASE_URL || 'NOT SET — using auto-detect'}\n`);
   });
 }).catch(err => { console.error('DB init failed:', err); process.exit(1); });
